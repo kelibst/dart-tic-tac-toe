@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 class User {
   String name;
@@ -54,83 +55,93 @@ class PlayGame {
     board[position - 1] = currentPlayer.symbol;
   }
 
-  bool checkWinner(User player) {
-    List<int> positions = List.generate(board.length, (index) => index + 1)
-        .where((position) => board[position - 1] == player.symbol)
-        .toList();
-    return winningStrategies.any((strategy) =>
-        strategy.every((position) => positions.contains(position)));
-  }
-
-  List<int> generateEmptySlot() {
-    late List<int> res = [];
-    for (int i = 0; i < board.length; i++) {
-      board[i] == " " ? res.add(i) : "";
-    }
-    return res;
-  }
-
-  // bool checkWinner(List<String> board, User player) {
-  //   for (var i = 0; i < winningStrategies.length; i++) {
-  //     var a = winningStrategies[i][0];
-  //     var b = winningStrategies[i][1];
-  //     var c = winningStrategies[i][2];
-  //     if (board[a] == player.symbol &&
-  //         board[b] == player.symbol &&
-  //         board[c] == player.symbol) {
-  //       return true;
-  //     }
-  //   }
-  //   return false;
+  // bool checkWinner(User player) {
+  //   List<int> positions = List.generate(board.length, (index) => index + 1)
+  //       .where((position) => board[position - 1] == player.symbol)
+  //       .toList();
+  //   return winningStrategies.any((strategy) =>
+  //       strategy.every((position) => positions.contains(position)));
   // }
 
-  void play(User currentUser) {
-    int i = 0;
-    while (i < 9) {
-      printBoard(board);
-      print('It is ${currentPlayer?.name}s turn!');
-
-      if (currentPlayer == user) {
-        stdout.write('Enter a number between 1-9 that is not yet taken: ');
-        String? position = stdin.readLineSync();
-        int number = int.tryParse(position ?? "") ?? 0;
-        if (validMove(number, board)) {
-          makeMove(number, currentPlayer);
-          if (checkWinner(currentPlayer)) {
-            printBoard(board);
-            print('${currentPlayer.name} wins!');
-            return;
-          }
-          changePlayer();
-          ++i;
-        } else {
-          print('Invalid move! Please try again.');
-          break;
-        }
-      } else {
-        var emptySpot = generateEmptySlot();
-        int selectedSpot = emptySpot[0];
-        if (validMove(selectedSpot += 1, board)) {
-          makeMove(selectedSpot, currentPlayer);
-          if (checkWinner(currentPlayer)) {
-            printBoard(board);
-            print('${currentPlayer.name} wins!');
-            return;
-          }
-          changePlayer();
-          ++i;
-        } else {
-          print('Invalid move! Please try again.');
-          break;
-        }
+  int generateRandomEmptySlot() {
+    Set<int> emptySlots = {};
+    for (int i = 0; i < board.length; i++) {
+      if (board[i] == " ") {
+        emptySlots.add(i);
       }
     }
+    if (emptySlots.isEmpty) {
+      return -1; // No empty slots available
+    }
+    return emptySlots.elementAt(Random().nextInt(emptySlots.length));
+  }
+
+  bool checkWinner(List<String> board, User player) {
+    for (var i = 0; i < winningStrategies.length; i++) {
+      var a = winningStrategies[i][0];
+      var b = winningStrategies[i][1];
+      var c = winningStrategies[i][2];
+      if (board[a] == player.symbol &&
+          board[b] == player.symbol &&
+          board[c] == player.symbol) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void printWin(User player) {
+    print("--------------");
+    print("|              |");
+    print("|${player.name}     |");
+    print("|    Wins      |");
+    print("|              |");
+    print("----------------");
+  }
+
+  int getUserInput() {
+    stdout.write('Enter a number between 1-9 that is not yet taken: ');
+    String? position = stdin.readLineSync();
+    return int.tryParse(position ?? "") ?? 0;
+  }
+
+  void play() {
+    printBoard(board);
+    for (int i = 0; i < 9; i++) {
+      print('It is ${currentPlayer.name}s turn!');
+      int selectedSpot = generateRandomEmptySlot() + 1;
+      late int number = 1000;
+      if (currentPlayer == user) {
+        while (!validMove(number, board)) {
+          number = getUserInput();
+          if (validMove(number, board)) {
+            makeMove(number, currentPlayer);
+            break;
+          } else {
+            print('Invalid move! Please try again.');
+          }
+        }
+      } else {
+        print(selectedSpot);
+        makeMove(selectedSpot, currentPlayer);
+      }
+
+      printBoard(board);
+      if (checkWinner(board, currentPlayer)) {
+        printWin(currentPlayer);
+        return;
+      }
+
+      changePlayer();
+    }
+    // Game ended in a draw
+    print('The game ended in a draw.');
   }
 
   void startGame() {
     user.name = getName();
     currentPlayer = user;
     print("Welcome ${user.name}! your symbol for this game is ${user.symbol}");
-    play(currentPlayer);
+    play();
   }
 }
